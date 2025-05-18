@@ -1,5 +1,6 @@
 # Compiladores
 Trabalho pra conclusão da disciplina em 2025.1 - UFC/Qx
+Opção 1 - Análise Léxica 
 
 ## ⚒️Participantes🛠️
 
