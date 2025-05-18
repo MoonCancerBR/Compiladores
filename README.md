@@ -1,7 +1,7 @@
 # Compiladores
 Trabalho pra conclusão da disciplina em 2025.1 - UFC/Qx
 
-## Participantes 👨‍💻
+## ⚒️Participantes🛠️
 
 * Andressa Lima Colares - 471151
 * Jade Martins Mota -  538320
