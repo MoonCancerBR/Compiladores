@@ -86,29 +86,26 @@ def converter_er_para_afn(posfixa):
     return pilha[0]
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-#tokens -> er's -> nfa's -> 1 dfa -> 
-def expandir_simbolos(simbolo):
-    if simbolo == 'l':
-        
 def _main__():
-    token_specs_simplificadas = {
-        'WHITESPACE':  's*',
-        'KEYWORD':     'num|text|show|true|false',
-        'LITERAL_NUM': 'dd*',
-        'LITERAL_TEXT': '"(abc)*"',
-        'OPERATOR':    '+|-|*|/|>|<|=',
-        'DELIMITER':   ';',
-        'IDENTIFIER':  'l(l|d|e)*' # e = !@#$%&?/|_ 
-    }#por enquanto identificador sem limite de caracteres!!!
-    
-    for nome, er in token_specs_simplificadas.items():
-        try:
-            er_posfixa = infixa_para_posfixa(er)
-            afn = converter_er_para_afn(er_posfixa)
-            print(f"Infixa: {er}\n Posfixa:{er_posfixa}")
-            print(f"{nome}: AFN criado com sucesso!\n\n")
-        except Exception as e:
-            print(f"{nome}: ER inválida -> {e}")
+    if True:
+        token_specs_simplificadas = {
+            'WHITESPACE':  's*',
+            'KEYWORD':     'num|text|show|true|false',
+            'LITERAL_NUM': 'dd*',
+            'LITERAL_TEXT': '"(abc)*"',
+            'OPERATOR':    '+|-|*|/|>|<|=',
+            'DELIMITER':   ';',
+            'IDENTIFIER':  'l(l|d|e)*' # e = !@#$%&?/|_ 
+        }#por enquanto identificador sem limite de caracteres!!!
+        lista_afns_criados = []
+        for nome, er in token_specs_simplificadas.items():
+            try:
+                er_posfixa = infixa_para_posfixa(er)
+                lista_afns_criados = converter_er_para_afn(er_posfixa)
+                print(f"Infixa: {er}\n Posfixa:{er_posfixa}")
+                print(f"{nome}: AFN criado com sucesso!\n\n")
+            except Exception as e:
+                print(f"{nome}: ER inválida -> {e}")
 
 if __name__ == "__main__":
     _main__()
