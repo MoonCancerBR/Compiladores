@@ -13,13 +13,13 @@ for _ in range(n):
         destinos = input(f" Estado(s) alcançado(s a partir de {estado} com '{simbolo}' (separados por espaço): ").split()
         nfa[estado][simbolo] = destinos
 
-print("\nAFN (NFA):")
+print("\n AFN (NFA):")
 print(nfa)
 print("\n Tabela do AFN:")
 print(pd.DataFrame(nfa).transpose())
 
 # Entrada dos estados finais
-estados_finais_afn = input("\nEstado(s) final(is) do AFN (separados por espaço): ").split()
+estados_finais_afn = input("\n Estado(s) final(is) do AFN (separados por espaço): ").split()
 
 # Entrada do estado inicial (NOVO)
 estado_inicial = input("Estado inicial do AFN: ")
@@ -44,9 +44,9 @@ while fila:
         if destinos_fs and destino_nome not in afd:
             fila.append(destinos_fs)
 
-print("\nAFD (DFA):")
+print("\n AFD (DFA):")
 print(afd)
-print("\nTabela do AFD:")
+print("\n Tabela do AFD:")
 print(pd.DataFrame(afd).transpose())
 
 # Determinar estados finais do AFD
@@ -55,4 +55,4 @@ for estado_composto in afd.keys():
     if any(e in estados_finais_afn for e in estado_composto.split(",")):
         estados_finais_afd.append(estado_composto)
 
-print("\nEstados finais do AFD:", estados_finais_afd)
+print("\n Estados finais do AFD:", estados_finais_afd)
