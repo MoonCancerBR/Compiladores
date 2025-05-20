@@ -1,0 +1,7 @@
+NUM palavra-chave,número
+TEXT palavra-chave
+VAR identificador
+EQ operador
+ADD operador
+CONST string,constante
+SEMICOLON pontuação
