@@ -12,6 +12,7 @@ def adicionar_concatenacoes(regex):
 
 def infixa_para_posfixa(regex):
     regex = adicionar_concatenacoes(regex)
+    print("Pontuada:",regex)
     precedencia = {'*': 3, '.': 2, '|': 1}
     posfixa = ''
     pilha = []
@@ -86,26 +87,27 @@ def converter_er_para_afn(posfixa):
     return pilha[0]
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-def _main__():
-    if True:
+def er_afn():
         token_specs_simplificadas = {
             'WHITESPACE':  's*',
             'KEYWORD':     'num|text|show|true|false',
             'LITERAL_NUM': 'dd*',
-            'LITERAL_TEXT': 'a(l|d|s|e)*a', #erro
-            'OPERATOR':    '(+|\\-|\\*|/|>|<|=)', #erro
+            'LITERAL_TEXT': 'a((l|d|s|e)*)a', #erro
+            'OPERATOR':    '(+|\\-|\\*|/|>|<|=)', #preciso escapar - e *
             'DELIMITER':   ';',
             'IDENTIFIER':  'l(l|d|e)*' # e = !@#$%&?/|_ 
         }#por enquanto identificador sem limite de caracteres!!!
+    #s: espaços/tabulação, d: 0 a 9, a: aspas, l: literal, e: + - * / > < = _
         lista_afns_criados = []
         for nome, er in token_specs_simplificadas.items():
             try:
                 er_posfixa = infixa_para_posfixa(er)
-                lista_afns_criados = converter_er_para_afn(er_posfixa)
                 print(f"Infixa: {er}\n Posfixa:{er_posfixa}")
+                lista_afns_criados = converter_er_para_afn(er_posfixa)
                 print(f"{nome}: AFN criado com sucesso!\n\n")
             except Exception as e:
                 print(f"{nome}: ER inválida -> {e}")
+        return lista_afns_criados
 
 if __name__ == "__main__":
-    _main__()
+    er_afn()
