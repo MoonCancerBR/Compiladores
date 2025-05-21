@@ -92,8 +92,8 @@ def _main__():
             'WHITESPACE':  's*',
             'KEYWORD':     'num|text|show|true|false',
             'LITERAL_NUM': 'dd*',
-            'LITERAL_TEXT': '"(abc)*"',
-            'OPERATOR':    '+|-|*|/|>|<|=',
+            'LITERAL_TEXT': 'a(l|d|s|e)*a', #erro
+            'OPERATOR':    '(+|\\-|\\*|/|>|<|=)', #erro
             'DELIMITER':   ';',
             'IDENTIFIER':  'l(l|d|e)*' # e = !@#$%&?/|_ 
         }#por enquanto identificador sem limite de caracteres!!!
