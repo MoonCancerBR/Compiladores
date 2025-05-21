@@ -111,14 +111,14 @@ def unir_afns(lista_afns):
 
 def er_afn():
     token_specs_simplificadas = {
-        'WHITESPACE':  's*',
+        'WHITESPACE':  ':*', #: ->  
         'NUM': 'num',
         'TEXT': 'text',
         'SHOW': 'show',
         'TRUE': 'true',
         'FALSE': 'false',
-        'LITERAL_NUM': 'dd*',
-        'LITERAL_TEXT': '^((l|d|s|o)*)^', #^:" 
+        'LITERAL_NUM': '~~*', #~: 0-9
+        'LITERAL_TEXT': '^((l|d|s|o)*)^', # ^:" 
         'EQ': '=',
         'ADD': '+',
         'SUB': '-',
