@@ -1,6 +1,7 @@
 #from erPARAafn import gerar_afns_de_ers  # nome mais claro que 'do_nfa_to_dfa'
 import pandas as pd
 from collections import deque
+from collections import defaultdict
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -44,16 +45,18 @@ def infixa_para_posfixa(regex):
     return posfixa
 
 class Estado:
-    def __init__(self):
-        self.transicoes = {}  # ex: "a": [estado1, estado2]
-        self.epsilon = []     # [estadox, estadoy]
-
+    def __init__(self, nome=None, token=None): 
+        self.nome = nome
+        self.transicoes = defaultdict(set)
+        self.epsilon = []  
+        self.token = token
+        
 class AFN:
     def __init__(self, inicio, finais):
         self.inicio = inicio
         self.finais = finais
 
-def converter_er_para_afn(posfixa):
+def converter_er_para_afn(posfixa, nome_token):
     pilha = []
 
     for simbolo in posfixa:
@@ -84,12 +87,15 @@ def converter_er_para_afn(posfixa):
             pilha.append(AFN(inicio, [fim]))
         else:
             inicio = Estado()
-            fim = Estado()
+            fim = Estado(token=nome_token)
             inicio.transicoes[simbolo] = [fim]
             pilha.append(AFN(inicio, [fim]))
 
     if len(pilha) != 1:
         raise ValueError("Expressão malformada. Pilha final: ", pilha)
+    # Marcar todos os finais com o token
+    for estado in pilha[0].finais:
+        estado.token = nome_token  
 
     return pilha[0]
 
@@ -112,11 +118,11 @@ def er_afn():
         'TRUE': 'true',
         'FALSE': 'false',
         'LITERAL_NUM': 'dd*',
-        'LITERAL_TEXT': 'a((l|d|s|o)*)a', #o: 
+        'LITERAL_TEXT': '^((l|d|s|o)*)^', #^:" 
         'EQ': '=',
         'ADD': '+',
         'SUB': '-',
-        'MUL': 'x', #x: *
+        'MUL': '´', #´: *
         'DIV': '/',
         'GT': '>',
         'LT': '<',
@@ -127,7 +133,7 @@ def er_afn():
     for nome, er in token_specs_simplificadas.items():
         try:
             er_posfixa = infixa_para_posfixa(er)
-            afn_criado = converter_er_para_afn(er_posfixa)
+            afn_criado = converter_er_para_afn(er_posfixa, nome)
             lista_afns_criados.append(afn_criado)
         except Exception as e:
             print(f"{nome}: ER inválida -> {e}")
@@ -159,6 +165,7 @@ def mover(estados, simbolo):
 def converter_afn_para_afd(afn):
     estados_afn = set()
     alfabeto = set()
+    token_afd = {}
 
     fila = deque([afn.inicio])
     visitados = set()
@@ -207,17 +214,23 @@ def converter_afn_para_afd(afn):
             afd[nome_atual][simbolo] = nome_estado
 
     for conjunto, nome in mapeamento_estados.items():
-        if any(e in afn.finais for e in conjunto):
-            finais_afd.add(nome)
+        for estado in conjunto:
+            if estado in afn.finais and estado.token:
+                finais_afd.add(nome)
+                if nome not in token_afd:
+                    token_afd[nome] = estado.token  # ← salva o primeiro token associado
+                break
 
-    return afd, finais_afd
+    return afd, finais_afd, token_afd
 
 # Executa a conversão
 afn_unico = er_afn()
-afd_resultado, finais_afd = converter_afn_para_afd(afn_unico)
+afd_resultado, finais_afd, token_afd = converter_afn_para_afd(afn_unico)
 
 # Exibe o AFD com Pandas
 print("\nAFD unificado:")
 df = pd.DataFrame(afd_resultado).fillna("∅")
 print(df.transpose())
 print("\nEstados finais do AFD:", finais_afd)
+for estado in finais_afd:
+    print(f"{estado}: token → {token_afd.get(estado, '???')}")
