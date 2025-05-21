@@ -103,11 +103,14 @@ def er_afn():
             try:
                 er_posfixa = infixa_para_posfixa(er)
                 print(f"Infixa: {er}\n Posfixa:{er_posfixa}")
-                lista_afns_criados = converter_er_para_afn(er_posfixa)
+                afn_criado = converter_er_para_afn(er_posfixa)
+                lista_afns_criados.append(afn_criado)
                 print(f"{nome}: AFN criado com sucesso!\n\n")
             except Exception as e:
                 print(f"{nome}: ER inválida -> {e}")
         return lista_afns_criados
 
 if __name__ == "__main__":
-    er_afn()
+    lista_afns = er_afn()
+    for afn in lista_afns:
+        print(afn)
