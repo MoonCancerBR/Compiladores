@@ -120,7 +120,7 @@ def er_afn():
         'DIV': '/',
         'GT': '>',
         'LT': '<',
-        'DELIMITER': ';',
+        'SEMICOLON': ';',
         'IDENTIFIER': 'l(l|d|e)*'
     }
     lista_afns_criados = []
