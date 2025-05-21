@@ -1,7 +1,17 @@
-NUM palavra-chave,número
-TEXT palavra-chave
-VAR identificador
-EQ operador
-ADD operador
-CONST string,constante
-SEMICOLON pontuação
+'WHITESPACE' Representa espaços em branco
+'NUM' Representa a palavra-chave que define o tipo numérico
+'TEXT' Representa a palavra-chave que define o tipo textual
+'SHOW' Representa o comando de saída de dados na linguagem
+'TRUE' Representa o valor booleano verdadeiro
+'FALSE' Representa o valor booleano falso
+'LITERAL_NUM' Representa um número
+'LITERAL_TEXT' Representa um texto
+'EQ' Representa o operador de atribuição ( = )
+'ADD' Representa o operador de adição ( + )
+'SUB' Representa o operador de subtração ( - ) 
+'MUL' Representa o operador de multiplicação ( * )
+'DIV' Representa o operador de divisão ( / )
+'GT' Representa o operador "maior que" ( > )
+'LT' Representa o operador "menor que" ( < )
+'SEMICOLON' Representa o símbolo de fim de instrução ( ; )
+'IDENTIFIER' Representa os identificadores (nome de variáveis) 
