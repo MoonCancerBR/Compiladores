@@ -7,6 +7,26 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
 
+token_specs_simplificadas = [
+    ('WHITESPACE', 's*'),
+    ('NUM', 'num'),
+    ('TEXT', 'text'),
+    ('SHOW', 'show'),
+    ('TRUE', 'true'),
+    ('FALSE', 'false'),
+    ('LITERAL_NUM', 'dd*'), #~: 0-9
+    ('LITERAL_TEXT', '"((l|d|s|o)*)"'), #literais, numeros, espaços, o: !@#$%&?/|
+    ('EQ', '='),
+    ('ADD', '+'),
+    ('SUB', '-'),
+    ('MUL', 'x'),
+    ('DIV', '/'),
+    ('GT', '>'),
+    ('LT', '<'),
+    ('SEMICOLON', ';'),
+    ('IDENTIFIER', 'l(l|d|e)*'),  #_ além de letras e dígitos
+]
+
 def adicionar_concatenacoes(regex):
     resultado = ""
     operadores = set(['|', '*', '+', '?'])
@@ -110,29 +130,11 @@ def unir_afns(lista_afns):
     return AFN(novo_inicio, novos_finais)
 
 def er_afn():
-    token_specs_simplificadas = {
-        'WHITESPACE':  ':*', #: ->  
-        'NUM': 'num',
-        'TEXT': 'text',
-        'SHOW': 'show',
-        'TRUE': 'true',
-        'FALSE': 'false',
-        'LITERAL_NUM': '~~*', #~: 0-9
-        'LITERAL_TEXT': '^((l|d|s|o)*)^', # ^:" 
-        'EQ': '=',
-        'ADD': '+',
-        'SUB': '-',
-        'MUL': '´', #´: *
-        'DIV': '/',
-        'GT': '>',
-        'LT': '<',
-        'SEMICOLON': ';',
-        'IDENTIFIER': 'l(l|d|e)*'
-    }
     lista_afns_criados = []
-    for nome, er in token_specs_simplificadas.items():
+    for nome, er in token_specs_simplificadas:
         try:
             er_posfixa = infixa_para_posfixa(er)
+            #print("Posfixa:", er_posfixa)
             afn_criado = converter_er_para_afn(er_posfixa, nome)
             lista_afns_criados.append(afn_criado)
         except Exception as e:
@@ -226,6 +228,7 @@ def converter_afn_para_afd(afn):
 # Executa a conversão
 afn_unico = er_afn()
 afd_resultado, finais_afd, token_afd = converter_afn_para_afd(afn_unico)
+
 
 # Exibe o AFD com Pandas
 print("\nAFD unificado:")
