@@ -1,7 +1,6 @@
 from functools import lru_cache
 
 # 1. Definição dos padrões da Jouette 
-
 PATTERNS = [
     ("TEMP", ("VAR",), 0),
     ("TEMP", ("CONST",), 0),
@@ -43,11 +42,9 @@ def parse_prefix(tokens):
 
     return Node("VAR", token=tok)
 
-
 # 3. Programação dinâmica para cobertura mínima
 @lru_cache(None)
 def cover(node):
-
     # I. Calcula os custos dos filhos
     filhos_info = [cover(child) for child in node.children]
     custo_filhos = sum(info[0] for info in filhos_info)
