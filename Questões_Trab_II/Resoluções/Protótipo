@@ -1,0 +1,140 @@
+# Trabalho II - Compiladores - Opção 1 (completo)
+# Etapas: Impressão da árvore, Seleção de instrução (PD), Geração de código final
+
+from functools import lru_cache
+
+# ---------------------- Parte 1 - Impressão da Árvore ----------------------
+class TreeNode:
+    def __init__(self, value):
+        self.value = value
+        self.children = []
+
+def parse_expression(expression):
+    stack = []
+    current = ""
+    i = 0
+    while i < len(expression):
+        char = expression[i]
+        if char == '(':
+            node = TreeNode(current.strip())
+            stack.append(node)
+            current = ""
+            i += 1
+        elif char == ')':
+            if current:
+                node = TreeNode(current.strip())
+                stack[-1].children.append(node)
+                current = ""
+            if len(stack) > 1:
+                child = stack.pop()
+                stack[-1].children.append(child)
+            i += 1
+        elif char == ',':
+            if current:
+                node = TreeNode(current.strip())
+                stack[-1].children.append(node)
+                current = ""
+            i += 1
+        else:
+            current += char
+            i += 1
+    if current and not stack:
+        return TreeNode(current.strip())
+    return stack[0] if stack else None
+
+def print_tree(node, prefix="", is_last=True):
+    if node is None:
+        return
+    print(prefix + ("└── " if is_last else "├── ") + node.value)
+    prefix += "    " if is_last else "│   "
+    for i, child in enumerate(node.children):
+        print_tree(child, prefix, i == len(node.children) - 1)
+
+# ---------------- Parte 2 - Seleção de Instruções com PD ----------------
+node_map = {}
+
+def get_cost(op):
+    if op == "TEMP":
+        return 0
+    if op == "MOVEM":
+        return 2
+    return 1
+
+@lru_cache(None)
+def cover(node_id):
+    node = node_map[node_id]
+    custo_filhos = 0
+    filhos_info = []
+    for child in node.children:
+        info = cover(str(id(child)))
+        filhos_info.append((info[0], info[1], child))
+        custo_filhos += info[0]
+    instr = node.value
+    total_cost = get_cost(instr) + custo_filhos
+    return total_cost, instr, filhos_info
+
+def emit_patterns(node_id):
+    node = node_map[node_id]
+    _, instr, filhos_info = cover(node_id)
+    for _, _, child in filhos_info:
+        emit_patterns(str(id(child)))
+    print(f"Padrão selecionado: {instr}({', '.join(child.value for _, _, child in filhos_info)})")
+
+# ---------------- Parte 3 - Geração de Código Final ----------------
+reg_counter = 1
+code_output = []
+
+def emit_code(node_id):
+    global reg_counter
+    node = node_map[node_id]
+    _, instr, filhos_info = cover(node_id)
+    regs = []
+    for _, _, child in filhos_info:
+        regs.append(emit_code(str(id(child))))
+    reg_result = f"R{reg_counter}"
+    reg_counter += 1
+
+    if instr == "CONST":
+        code_output.append(f"MOV {reg_result}, #{node.children[0].value}")
+    elif instr == "TEMP":
+        code_output.append(f"MOV {reg_result}, TEMP")
+    elif instr in {"ADD", "SUB", "MUL", "DIV"}:
+        code_output.append(f"{instr} {reg_result}, {regs[0]}, {regs[1]}")
+    elif instr == "MOVEM":
+        code_output.append(f"MOVEM {regs[1]} -> [{regs[0]}]")
+    else:
+        code_output.append(f"{instr} {reg_result}")
+    return reg_result
+
+# ---------------- Main ----------------
+def main():
+    global node_map, reg_counter, code_output
+
+    print("Digite a expressão no formato linear (ex: ADD(CONST 1, CONST 2)):")
+    expr = input("Expressão: ").strip()
+    root = parse_expression(expr)
+
+    print("\nÁrvore de sintaxe da expressão:")
+    print_tree(root)
+
+    node_map = {}
+    def registrar(node):
+        node_map[str(id(node))] = node
+        for child in node.children:
+            registrar(child)
+    registrar(root)
+
+    total_cost, _, _ = cover(str(id(root)))
+
+    print("\nPadrões selecionados:")
+    emit_patterns(str(id(root)))
+
+    print("\nCódigo gerado:")
+    emit_code(str(id(root)))
+    for line in code_output:
+        print(line)
+
+    print(f"\nCusto total: {total_cost}")
+
+if __name__ == "__main__":
+    main()
