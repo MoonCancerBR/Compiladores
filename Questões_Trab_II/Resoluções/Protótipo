@@ -1,6 +1,3 @@
-# Trabalho II - Compiladores - Opção 1 (completo)
-# Etapas: Impressão da árvore, Seleção de instrução (PD), Geração de código final
-
 from functools import lru_cache
 
 # ---------------------- Parte 1 - Impressão da Árvore ----------------------
@@ -10,37 +7,36 @@ class TreeNode:
         self.children = []
 
 def parse_expression(expression):
-    stack = []
-    current = ""
-    i = 0
-    while i < len(expression):
-        char = expression[i]
-        if char == '(':
-            node = TreeNode(current.strip())
-            stack.append(node)
-            current = ""
-            i += 1
-        elif char == ')':
-            if current:
-                node = TreeNode(current.strip())
-                stack[-1].children.append(node)
-                current = ""
-            if len(stack) > 1:
-                child = stack.pop()
-                stack[-1].children.append(child)
-            i += 1
-        elif char == ',':
-            if current:
-                node = TreeNode(current.strip())
-                stack[-1].children.append(node)
-                current = ""
-            i += 1
-        else:
-            current += char
-            i += 1
-    if current and not stack:
-        return TreeNode(current.strip())
-    return stack[0] if stack else None
+    def parse(tokens):
+        token = tokens.pop(0)
+        node = TreeNode(token)
+        if tokens and tokens[0] == '(':
+            tokens.pop(0)  # remove '('
+            while tokens and tokens[0] != ')':
+                if tokens[0] == ',':
+                    tokens.pop(0)
+                    continue
+                node.children.append(parse(tokens))
+            tokens.pop(0)  # remove ')'
+        return node
+
+    def tokenize(expr):
+        tokens = []
+        current = ""
+        for c in expr:
+            if c in "(),":
+                if current.strip():
+                    tokens.append(current.strip())
+                    current = ""
+                tokens.append(c)
+            else:
+                current += c
+        if current.strip():
+            tokens.append(current.strip())
+        return tokens
+
+    tokens = tokenize(expression)
+    return parse(tokens)
 
 def print_tree(node, prefix="", is_last=True):
     if node is None:
@@ -74,7 +70,6 @@ def cover(node_id):
     return total_cost, instr, filhos_info
 
 def emit_patterns(node_id):
-    node = node_map[node_id]
     _, instr, filhos_info = cover(node_id)
     for _, _, child in filhos_info:
         emit_patterns(str(id(child)))
@@ -88,9 +83,7 @@ def emit_code(node_id):
     global reg_counter
     node = node_map[node_id]
     _, instr, filhos_info = cover(node_id)
-    regs = []
-    for _, _, child in filhos_info:
-        regs.append(emit_code(str(id(child))))
+    regs = [emit_code(str(id(child))) for _, _, child in filhos_info]
     reg_result = f"R{reg_counter}"
     reg_counter += 1
 
@@ -99,9 +92,15 @@ def emit_code(node_id):
     elif instr == "TEMP":
         code_output.append(f"MOV {reg_result}, TEMP")
     elif instr in {"ADD", "SUB", "MUL", "DIV"}:
-        code_output.append(f"{instr} {reg_result}, {regs[0]}, {regs[1]}")
+        if len(regs) >= 2:
+            code_output.append(f"{instr} {reg_result}, {regs[0]}, {regs[1]}")
+        else:
+            code_output.append(f"{instr} {reg_result}, {', '.join(regs)}")
     elif instr == "MOVEM":
-        code_output.append(f"MOVEM {regs[1]} -> [{regs[0]}]")
+        if len(regs) >= 2:
+            code_output.append(f"MOVEM {regs[1]} -> [{regs[0]}]")
+        else:
+            code_output.append(f"MOVEM ???")  # tratar erro de estrutura
     else:
         code_output.append(f"{instr} {reg_result}")
     return reg_result
