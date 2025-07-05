@@ -84,7 +84,7 @@ class ExpressionCompiler:
             return node_value.split()[1] if len(node_value.split()) > 1 else node_value[4:]
         return node_value
     
-    def select_instructions(self, node): #seleciona instruções para uma árvore sintática"""
+    def select_instructions(self, node): #seleciona instruções para uma árvore sintática
         if node is None:
             return None, 0
         
