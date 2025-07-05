@@ -18,7 +18,7 @@ class ExpressionCompiler:
             'ADD1': 1, 'SUB1': 1, 'STORE': 1, 'MOVEM': 3, 'MOVE': 3
         }
         self.total_cost = 0
-    
+#Etapa 1: Impressão da árvore_____________________________________
     def parse_expression(self, expression): #transforma expressão em notação funcional para árvore sintática
         stack = []
         current = ""
@@ -65,7 +65,7 @@ class ExpressionCompiler:
         
         for i, child in enumerate(node.children):
             self.print_tree(child, prefix, i == len(node.children) - 1)
-    
+#Etapa 2: Seleção de instruções_____________________________________
     def get_next_register(self): #gera próximo registrador
         reg = f"r{self.register_counter}"
         self.register_counter += 1
@@ -88,26 +88,24 @@ class ExpressionCompiler:
         if node is None:
             return None, 0
         
-        # Casos base - constantes, variáveis temporárias e registradores
+        #casos base(constantes, variáveis temporárias e registradores)
         if node.value.startswith('CONST'):
             return self.extract_value(node.value), 0
         
         if node.value.startswith('TEMP'):
-            # Variáveis temporárias têm custo zero
             return self.extract_value(node.value), 0
         
         if node.value in ['FD', 'FP'] or node.value.startswith('r'):
             return node.value, 0
         
-        # Operações aritméticas
+        #operações aritméticas
         if node.value == 'ADD':
             left_reg, left_cost = self.select_instructions(node.children[0])
             right_reg, right_cost = self.select_instructions(node.children[1])
             
             result_reg = self.get_next_register()
             
-            # Verifica se é ADD1 (operando direito é constante)
-            if self.is_constant(node.children[1].value):
+            if self.is_constant(node.children[1].value): #verificar se é ADD1
                 self.instructions.append(f"ADD1  {result_reg} ← {left_reg} + {right_reg}")
                 cost = self.costs['ADD1']
             else:
@@ -151,7 +149,6 @@ class ExpressionCompiler:
             
             return result_reg, left_cost + right_cost + cost
         
-        # Operações de memória
         elif node.value == 'MEM':
             addr_reg, addr_cost = self.select_instructions(node.children[0])
             result_reg = self.get_next_register()
@@ -179,9 +176,8 @@ class ExpressionCompiler:
             
             return None, src_cost + dst_cost + cost
         
-        # Caso padrão para identificadores simples
-        return node.value, 0
-    
+        return node.value, 0 
+#Etapa 3: Geração do 'código final'
     def compile_expression(self, expression):
         print(f"ENTRADA: {expression}")
         
