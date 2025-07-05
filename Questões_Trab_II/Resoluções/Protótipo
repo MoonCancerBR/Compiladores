@@ -1,148 +1,262 @@
+# Trabalho II - Compiladores - Opção 1 (completo)
+# Etapas: Impressão da árvore, Seleção de instrução (PD), Geração de código final
 from functools import lru_cache
 
-# ---------------------- Parte 1 - Impressão da Árvore ----------------------
 class TreeNode:
     def __init__(self, value):
         self.value = value
         self.children = []
+        self.register = None
+        self.cost = 0
 
-def parse_expression(expression):
-    def tokenize(expr):
-        tokens = []
+class ExpressionCompiler:
+    def __init__(self):
+        self.register_counter = 0
+        self.instructions = []
+        self.costs = {
+            'LOAD': 1, 'ADD': 1, 'SUB': 1, 'MULT': 1, 'DIV': 1,
+            'ADD1': 1, 'SUB1': 1, 'STORE': 1, 'MOVEM': 3, 'MOVE': 3
+        }
+        self.total_cost = 0
+    
+    def parse_expression(self, expression): #transforma expressão em notação funcional para árvore sintática
+        stack = []
         current = ""
-        for c in expr:
-            if c in "(),":
+        i = 0
+        
+        while i < len(expression):
+            char = expression[i]
+            if char == '(':
                 if current.strip():
-                    tokens.append(current.strip())
+                    node = TreeNode(current.strip())
+                    stack.append(node)
+                current = ""
+            elif char == ')':
+                if current.strip():
+                    node = TreeNode(current.strip())
+                    if stack:
+                        stack[-1].children.append(node)
+                    else:
+                        stack.append(node)
                     current = ""
-                tokens.append(c)
+                if len(stack) > 1:
+                    child = stack.pop()
+                    stack[-1].children.append(child)
+            elif char == ',':
+                if current.strip():
+                    node = TreeNode(current.strip())
+                    if stack:
+                        stack[-1].children.append(node)
+                    current = ""
             else:
-                current += c
-        if current.strip():
-            tokens.append(current.strip())
-        return tokens
-
-    def parse_tokens(tokens):
-        def parse_node():
-            token = tokens.pop(0)
-            node = TreeNode(token)
-            if tokens and tokens[0] == '(':
-                tokens.pop(0)  # remove '('
-                while tokens and tokens[0] != ')':
-                    if tokens[0] == ',':
-                        tokens.pop(0)
-                        continue
-                    node.children.append(parse_node())
-                tokens.pop(0)  # remove ')'
-            return node
-
-        return parse_node()
-
-    tokens = tokenize(expression)
-    return parse_tokens(tokens)
-
-def print_tree(node, prefix="", is_last=True):
-    if node is None:
-        return
-    print(prefix + ("└── " if is_last else "├── ") + node.value)
-    prefix += "    " if is_last else "│   "
-    for i, child in enumerate(node.children):
-        print_tree(child, prefix, i == len(node.children) - 1)
-
-# ---------------- Parte 2 - Seleção de Instruções com PD ----------------
-node_map = {}
-
-def get_cost(op):
-    if op == "TEMP":
-        return 0
-    if op == "MOVEM":
-        return 2
-    return 1
-
-@lru_cache(None)
-def cover(node_id):
-    node = node_map[node_id]
-    custo_filhos = 0
-    filhos_info = []
-    for child in node.children:
-        info = cover(str(id(child)))
-        filhos_info.append((info[0], info[1], child))
-        custo_filhos += info[0]
-    instr = node.value
-    total_cost = get_cost(instr) + custo_filhos
-    return total_cost, instr, filhos_info
-
-def emit_patterns(node_id):
-    _, instr, filhos_info = cover(node_id)
-    for _, _, child in filhos_info:
-        emit_patterns(str(id(child)))
-    print(f"Padrão selecionado: {instr}({', '.join(child.value for _, _, child in filhos_info)})")
-
-# ---------------- Parte 3 - Geração de Código Final ----------------
-reg_counter = 1
-code_output = []
-
-def emit_code(node_id):
-    global reg_counter
-    node = node_map[node_id]
-    _, instr, filhos_info = cover(node_id)
-    regs = [emit_code(str(id(child))) for _, _, child in filhos_info]
-    reg_result = f"R{reg_counter}"
-    reg_counter += 1
-
-    if instr == "CONST":
-        code_output.append(f"MOV {reg_result}, #{node.children[0].value}")
-    elif instr == "TEMP":
-        code_output.append(f"MOV {reg_result}, TEMP")
-    elif instr in {"ADD", "SUB", "MUL", "DIV"}:
-        if len(regs) >= 2:
-            code_output.append(f"{instr} {reg_result}, {regs[0]}, {regs[1]}")
+                current += char
+            i += 1
+        
+        if current.strip() and not stack:
+            return TreeNode(current.strip())
+        return stack[0] if stack else None
+    
+    def print_tree(self, node, prefix="", is_last=True): #Imprime árvore sintática
+        if node is None:
+            return
+        
+        print(prefix + ("└── " if is_last else "├── ") + node.value)
+        prefix += "    " if is_last else "│   "
+        
+        for i, child in enumerate(node.children):
+            self.print_tree(child, prefix, i == len(node.children) - 1)
+    
+    def get_next_register(self): #gera próximo registrador
+        reg = f"r{self.register_counter}"
+        self.register_counter += 1
+        return reg
+    
+    def is_constant(self, value):
+        return value.startswith('CONST')
+    
+    def is_temp_var(self, value):
+        return value.startswith('TEMP')
+    
+    def extract_value(self, node_value): #extrai o valor de nós CONST ou TEMP
+        if node_value.startswith('CONST'):
+            return node_value.split()[1] if len(node_value.split()) > 1 else node_value[5:]
+        elif node_value.startswith('TEMP'):
+            return node_value.split()[1] if len(node_value.split()) > 1 else node_value[4:]
+        return node_value
+    
+    def select_instructions(self, node): #seleciona instruções para uma árvore sintática"""
+        if node is None:
+            return None, 0
+        
+        # Casos base - constantes, variáveis temporárias e registradores
+        if node.value.startswith('CONST'):
+            return self.extract_value(node.value), 0
+        
+        if node.value.startswith('TEMP'):
+            # Variáveis temporárias têm custo zero
+            return self.extract_value(node.value), 0
+        
+        if node.value in ['FD', 'FP'] or node.value.startswith('r'):
+            return node.value, 0
+        
+        # Operações aritméticas
+        if node.value == 'ADD':
+            left_reg, left_cost = self.select_instructions(node.children[0])
+            right_reg, right_cost = self.select_instructions(node.children[1])
+            
+            result_reg = self.get_next_register()
+            
+            # Verifica se é ADD1 (operando direito é constante)
+            if self.is_constant(node.children[1].value):
+                self.instructions.append(f"ADD1  {result_reg} ← {left_reg} + {right_reg}")
+                cost = self.costs['ADD1']
+            else:
+                self.instructions.append(f"ADD   {result_reg} ← {left_reg} + {right_reg}")
+                cost = self.costs['ADD']
+            
+            return result_reg, left_cost + right_cost + cost
+        
+        elif node.value == 'SUB':
+            left_reg, left_cost = self.select_instructions(node.children[0])
+            right_reg, right_cost = self.select_instructions(node.children[1])
+            
+            result_reg = self.get_next_register()
+            
+            if self.is_constant(node.children[1].value):
+                self.instructions.append(f"SUB1  {result_reg} ← {left_reg} - {right_reg}")
+                cost = self.costs['SUB1']
+            else:
+                self.instructions.append(f"SUB   {result_reg} ← {left_reg} - {right_reg}")
+                cost = self.costs['SUB']
+            
+            return result_reg, left_cost + right_cost + cost
+        
+        elif node.value == 'MULT':
+            left_reg, left_cost = self.select_instructions(node.children[0])
+            right_reg, right_cost = self.select_instructions(node.children[1])
+            
+            result_reg = self.get_next_register()
+            self.instructions.append(f"MUL   {result_reg} ← {left_reg} * {right_reg}")
+            cost = self.costs['MULT']
+            
+            return result_reg, left_cost + right_cost + cost
+        
+        elif node.value == 'DIV':
+            left_reg, left_cost = self.select_instructions(node.children[0])
+            right_reg, right_cost = self.select_instructions(node.children[1])
+            
+            result_reg = self.get_next_register()
+            self.instructions.append(f"DIV   {result_reg} ← {left_reg} / {right_reg}")
+            cost = self.costs['DIV']
+            
+            return result_reg, left_cost + right_cost + cost
+        
+        # Operações de memória
+        elif node.value == 'MEM':
+            addr_reg, addr_cost = self.select_instructions(node.children[0])
+            result_reg = self.get_next_register()
+            
+            self.instructions.append(f"LOAD  {result_reg} ← M[{addr_reg}]")
+            cost = self.costs['LOAD']
+            
+            return result_reg, addr_cost + cost
+        
+        elif node.value == 'STORE':
+            addr_reg, addr_cost = self.select_instructions(node.children[0])
+            value_reg, value_cost = self.select_instructions(node.children[1])
+            
+            self.instructions.append(f"STORE M[{addr_reg}] ← {value_reg}")
+            cost = self.costs['STORE']
+            
+            return None, addr_cost + value_cost + cost
+        
+        elif node.value == 'MOVE':
+            src_reg, src_cost = self.select_instructions(node.children[0])
+            dst_reg, dst_cost = self.select_instructions(node.children[1])
+            
+            self.instructions.append(f"MOVEM M[{dst_reg}] ← M[{src_reg}]")
+            cost = self.costs['MOVEM']
+            
+            return None, src_cost + dst_cost + cost
+        
+        # Caso padrão para identificadores simples
+        return node.value, 0
+    
+    def compile_expression(self, expression):
+        print(f"ENTRADA: {expression}")
+        
+        # Reset do estado
+        self.register_counter = 0
+        self.instructions = []
+        self.total_cost = 0
+        
+        # Etapa 1: Parse e impressão da árvore
+        print("\nÁRVORE DE SINTAXE ABSTRATA:")
+        tree = self.parse_expression(expression)
+        if tree:
+            self.print_tree(tree)
         else:
-            code_output.append(f"{instr} {reg_result}, {', '.join(regs)}")
-    elif instr == "MOVEM":
-        if len(regs) >= 2:
-            code_output.append(f"MOVEM {regs[1]} -> [{regs[0]}]")
+            print("Erro: Não foi possível fazer o parse da expressão")
+            return
+        
+        # Etapa 2: Seleção de instruções
+        final_reg, total_cost = self.select_instructions(tree)
+        self.total_cost = total_cost
+        
+        # Etapa 3: Código gerado
+        print("\nCÓDIGO FINAL:")
+        if self.instructions:
+            for instruction in self.instructions:
+                print(f"{instruction}")
         else:
-            code_output.append(f"MOVEM ???")  # tratar erro de estrutura
-    else:
-        code_output.append(f"{instr} {reg_result}")
-    return reg_result
+            print("Nenhuma instrução gerada")
+        
+        print(f"\nCUSTO TOTAL: {self.total_cost}")
+        print(f"REGISTRADORES UTILIZADOS: {self.register_counter}")
+        
+        return self.instructions, self.total_cost
 
-# ---------------- Main ----------------
+# ---------------------- Interface ----------------------
 def main():
-    global node_map, reg_counter, code_output
+    compiler = ExpressionCompiler()
+    
+    while True:
+        print("\nDigite uma expressão ou 'quit' para sair:")
+        expression = input(">> ").strip()
+        
+        if expression.lower() in ['quit']:
+            print("Tchau!!!")
+            break
+        
+        if not expression:
+            continue
+        
+        try:
+            compiler.compile_expression(expression)
+        except Exception as e:
+            print(f"Erro na compilação: {e}")
+        
+        print("\n" + "="*70)
 
-    print("Digite a expressão no formato linear (ex: ADD(CONST 1, CONST 2)):")
-    expr = input("Expressão: ").strip()
-
-    # Validar parênteses
-    if expr.count('(') != expr.count(')'):
-        print("Erro: parênteses desbalanceados.")
-        return
-
-    root = parse_expression(expr)
-
-    print("\nÁrvore de sintaxe da expressão:")
-    print_tree(root)
-
-    node_map = {}
-    def registrar(node):
-        node_map[str(id(node))] = node
-        for child in node.children:
-            registrar(child)
-    registrar(root)
-
-    total_cost, _, _ = cover(str(id(root)))
-
-    print("\nPadrões selecionados:")
-    emit_patterns(str(id(root)))
-
-    print("\nCódigo gerado:")
-    emit_code(str(id(root)))
-    for line in code_output:
-        print(line)
-
-    print(f"\nCusto total: {total_cost}")
+# ---------------------- Exemplos de Teste ----------------------
+def run_examples():
+    compiler = ExpressionCompiler()
+    
+    examples = [
+        "MOVE(MEM(ADD(MEM(ADD(FD, CONST a)), MULT(TEMP i, CONST 4))),MEM(ADD(FP, CONST x)))",
+        "ADD(MULT(TEMP a, CONST 2), CONST 5)",
+        "MEM(ADD(FP, CONST 10))",
+        "STORE(ADD(FD, CONST offset), TEMP value)",
+        "SUB(MEM(FD), CONST 1)"
+    ]
+    
+    print("EXECUTANDO EXEMPLOS DE TESTE:")
+    
+    for i, example in enumerate(examples, 1):
+        print(f"\nEXEMPLO {i}:")
+        compiler.compile_expression(example)
+        print("-"*50)
 
 if __name__ == "__main__":
+    run_examples()
     main()
