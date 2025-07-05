@@ -7,19 +7,6 @@ class TreeNode:
         self.children = []
 
 def parse_expression(expression):
-    def parse(tokens):
-        token = tokens.pop(0)
-        node = TreeNode(token)
-        if tokens and tokens[0] == '(':
-            tokens.pop(0)  # remove '('
-            while tokens and tokens[0] != ')':
-                if tokens[0] == ',':
-                    tokens.pop(0)
-                    continue
-                node.children.append(parse(tokens))
-            tokens.pop(0)  # remove ')'
-        return node
-
     def tokenize(expr):
         tokens = []
         current = ""
@@ -35,8 +22,24 @@ def parse_expression(expression):
             tokens.append(current.strip())
         return tokens
 
+    def parse_tokens(tokens):
+        def parse_node():
+            token = tokens.pop(0)
+            node = TreeNode(token)
+            if tokens and tokens[0] == '(':
+                tokens.pop(0)  # remove '('
+                while tokens and tokens[0] != ')':
+                    if tokens[0] == ',':
+                        tokens.pop(0)
+                        continue
+                    node.children.append(parse_node())
+                tokens.pop(0)  # remove ')'
+            return node
+
+        return parse_node()
+
     tokens = tokenize(expression)
-    return parse(tokens)
+    return parse_tokens(tokens)
 
 def print_tree(node, prefix="", is_last=True):
     if node is None:
@@ -111,6 +114,12 @@ def main():
 
     print("Digite a expressão no formato linear (ex: ADD(CONST 1, CONST 2)):")
     expr = input("Expressão: ").strip()
+
+    # Validar parênteses
+    if expr.count('(') != expr.count(')'):
+        print("Erro: parênteses desbalanceados.")
+        return
+
     root = parse_expression(expr)
 
     print("\nÁrvore de sintaxe da expressão:")
